@@ -1,0 +1,785 @@
+{
+  "name": "N8n workflows trending",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        224
+      ],
+      "id": "3d4a9a8e-c79f-4155-9acd-b69555f06936",
+      "name": "When clicking ‘Test workflow’"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Set parameters').item.json['receiver email'] }}",
+        "subject": "N8n workflows trending",
+        "message": "={{ $json.concatenated_table }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        3200,
+        128
+      ],
+      "id": "1711a88a-f63f-49e3-9cf5-a9b1e1b30c82",
+      "name": "Gmail",
+      "webhookId": "34c1b90b-95b4-4db8-9004-e5b043a37764",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "m4OQCLBTekhtflSN",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.n8n.io/api/templates/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "rows",
+              "value": "1"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "*/*"
+            },
+            {
+              "name": "accept-language",
+              "value": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7"
+            },
+            {
+              "name": "cache-control",
+              "value": "no-cache"
+            },
+            {
+              "name": "origin",
+              "value": "https://n8n.io"
+            },
+            {
+              "name": "pragma",
+              "value": "no-cache"
+            },
+            {
+              "name": "priority",
+              "value": "u=1, i"
+            },
+            {
+              "name": "referer",
+              "value": "https://n8n.io/"
+            },
+            {
+              "name": "sec-ch-ua",
+              "value": "\"Chromium\";v=\"140\", \"Not=A?Brand\";v=\"24\", \"Google Chrome\";v=\"140\""
+            },
+            {
+              "name": "sec-ch-ua-mobile",
+              "value": "?0"
+            },
+            {
+              "name": "sec-ch-ua-platform",
+              "value": "\"Windows\""
+            },
+            {
+              "name": "sec-fetch-dest",
+              "value": "empty"
+            },
+            {
+              "name": "sec-fetch-mode",
+              "value": "cors"
+            },
+            {
+              "name": "sec-fetch-site",
+              "value": "same-site"
+            },
+            {
+              "name": "user-agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        288,
+        128
+      ],
+      "id": "ad4fb909-b195-4a2f-ba39-e0722f460805",
+      "name": "Get total workflows"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "pages",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        736,
+        128
+      ],
+      "id": "837787cc-af89-45b4-a90f-5cf6dd294c93",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "workflows"
+            }
+          ]
+        },
+        "options": {
+          "mergeLists": true
+        }
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        128
+      ],
+      "id": "86f201d8-bda7-454f-a184-07573709552f",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.pages = Array.from({ length: Math.ceil(item.json.totalWorkflows/200) }, (_, i) => i+1)\n\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        128
+      ],
+      "id": "8fca2a8d-40d2-471e-a919-1eb93715e60a",
+      "name": "Split batches"
+    },
+    {
+      "parameters": {
+        "url": "https://n8n.io/api/product-api/workflows/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "page",
+              "value": "={{ $json.pages }}"
+            },
+            {
+              "name": "rows",
+              "value": "200"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        128
+      ],
+      "id": "eeab8d9e-a76e-4b5d-a646-50bf291c8677",
+      "name": "Get n8n workflows by page"
+    },
+    {
+      "parameters": {
+        "jsCode": "function slugify(text) {\n  return text\n    .toString()\n    .normalize(\"NFD\")\n    .replace(/[\\u0300-\\u036f]/g, \"\")\n    .replace(/&/g, \"and\")\n    .replace(/[^a-zA-Z0-9\\s-]/g, \"\")\n    .trim()\n    .replace(/\\s+/g, \"-\")\n    .replace(/-+/g, \"-\")\n    .toLowerCase();\n}\n\nfor (const item of $input.all()) {\n  for (const w of item.json.workflows) {\n    const now = new Date();\n    const createTime = new Date(w.createdAt)\n    const diffDays = Math.max(\n      1,\n      Math.floor((now.getTime() - createTime.getTime()) / (1000 * 60 * 60 * 24))\n    );\n\n    const totalViews = w.totalViews || 0;\n    w.dailyViews = totalViews / diffDays;\n    w.monthlyViews = Math.floor(w.dailyViews * 30);\n    const hasPrice = typeof w.price === \"number\";\n    w.monthlyIncome = hasPrice ? Math.floor((w.monthlyViews * w.price) / 100) : 0;\n\n    w.link_address = `https://n8n.io/workflows/${w.id}-${slugify(\n      w.name.replace(\".\", \"\")\n    )}`;\n    w.price = hasPrice ? w.price : 0;\n    delete w.nodes;\n    delete w.dailyViews;\n    delete w.id;\n    delete w.purchaseUrl;\n    delete w.user;\n    delete w.description;\n  }\n}\n\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        128
+      ],
+      "id": "13a58521-62e4-485e-9fcf-0717c99d9d99",
+      "name": "Enrich workflow meta"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "workflows",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1632,
+        128
+      ],
+      "id": "1120af73-fdf8-49f8-8fb4-a5767360cc50",
+      "name": "Split Out1"
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "monthlyViews",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        2080,
+        -64
+      ],
+      "id": "3a577770-1631-477c-aaa7-ad89967dd7af",
+      "name": "Sort by monthlyViews"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d1c091d5-d1ce-438f-9fb3-55941c7dbbd8",
+              "leftValue": "={{ $json.price }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "acb346eb-f535-40eb-92d2-f0862e1bbc02",
+              "leftValue": "={{ $json.price }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1856,
+        128
+      ],
+      "id": "20ef86de-18be-483a-b448-acc48c0b2d14",
+      "name": "Filter paid workflows"
+    },
+    {
+      "parameters": {
+        "maxItems": "={{ $('Set parameters').item.json['top n'] }}"
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        2304,
+        -64
+      ],
+      "id": "5672457d-9342-4db5-a3f6-c1cf3b5d20e5",
+      "name": "Limit1"
+    },
+    {
+      "parameters": {
+        "maxItems": "={{ $('Set parameters').item.json['top n'] }}"
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        2304,
+        128
+      ],
+      "id": "60cfecce-f9b8-4cbb-bb2e-03d88f548233",
+      "name": "Limit2"
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "monthlyViews",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        2080,
+        128
+      ],
+      "id": "74ae36d1-01a8-4f9f-970b-d1848534e11a",
+      "name": "Sort by monthlyViews1"
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "monthlyIncome",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        2080,
+        320
+      ],
+      "id": "4b49e14a-2023-454a-aa63-8291c3c9508b",
+      "name": "Sort by monthlyIncome"
+    },
+    {
+      "parameters": {
+        "operation": "convertToHtmlTable",
+        "options": {
+          "customStyling": true,
+          "caption": "=<span style=\"font-size: 24px; font-weight: bold; line-height: 48px;\">Top {{ $('Set parameters').item.json['top n'] }} monthly views workflows</span>"
+        }
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        2528,
+        -64
+      ],
+      "id": "14d57205-2fb0-4258-b9c7-2f24eca0963a",
+      "name": "Generate top monthly views workflows table"
+    },
+    {
+      "parameters": {
+        "operation": "convertToHtmlTable",
+        "options": {
+          "customStyling": true,
+          "caption": "=<span style=\"font-size: 24px; font-weight: bold; line-height: 48px;\">Top {{ $('Set parameters').item.json['top n'] }} monthly views paid workflows</span>"
+        }
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        2528,
+        128
+      ],
+      "id": "662a4155-8c3e-4077-8480-dc6e2068f5ec",
+      "name": "Genetate top monthly views paid workflows table"
+    },
+    {
+      "parameters": {
+        "operation": "convertToHtmlTable",
+        "options": {
+          "customStyling": true,
+          "caption": "=<span style=\"font-size: 24px; font-weight: bold; line-height: 48px;\">Top {{ $('Set parameters').item.json['top n'] }} monthly income workflows (estimated by 1% conversion rate)</span>"
+        }
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        2528,
+        320
+      ],
+      "id": "25ca269e-963e-43fe-bf25-7eb68c41d8b8",
+      "name": "Generate top monthly income workflows table"
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2752,
+        112
+      ],
+      "id": "34f8657b-89a4-4bac-b131-8aaff08acf47",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "fieldsToSummarize": {
+          "values": [
+            {
+              "aggregation": "concatenate",
+              "field": "table",
+              "separateBy": "\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.summarize",
+      "typeVersion": 1.1,
+      "position": [
+        2976,
+        128
+      ],
+      "id": "0aeb9c2e-3bd9-4dda-892e-ea5d98f2982e",
+      "name": "Summarize"
+    },
+    {
+      "parameters": {
+        "maxItems": "={{ $('Set parameters').item.json['top n'] }}"
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        2304,
+        320
+      ],
+      "id": "c46da553-5262-4604-8038-10c23317686f",
+      "name": "Limit3"
+    },
+    {
+      "parameters": {
+        "content": "Edit this node to：\n- change top n, the default is 20\n- set the receiver email address",
+        "height": 304
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -8,
+        -16
+      ],
+      "id": "4c609b6e-8e25-44cb-a48c-621b2ffdcdd3",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -160,
+        32
+      ],
+      "id": "666e27b0-748a-4e33-aef4-b97dbbf32868",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "64855f41-fcb2-493e-8cfc-30f105746024",
+              "name": "top n",
+              "value": "20",
+              "type": "string"
+            },
+            {
+              "id": "7107a3ad-d58f-49b6-9dde-faf004964569",
+              "name": "receiver email",
+              "value": "example@gmail.com",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        64,
+        128
+      ],
+      "id": "5766be82-0a71-4036-b4c4-5a0af3a1b4c2",
+      "name": "Set parameters"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Test workflow’": {
+      "main": [
+        [
+          {
+            "node": "Set parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get total workflows": {
+      "main": [
+        [
+          {
+            "node": "Split batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Get n8n workflows by page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Split Out1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split batches": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get n8n workflows by page": {
+      "main": [
+        [
+          {
+            "node": "Enrich workflow meta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich workflow meta": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out1": {
+      "main": [
+        [
+          {
+            "node": "Sort by monthlyViews",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Filter paid workflows",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Sort by monthlyIncome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort by monthlyViews": {
+      "main": [
+        [
+          {
+            "node": "Limit1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter paid workflows": {
+      "main": [
+        [
+          {
+            "node": "Sort by monthlyViews1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit1": {
+      "main": [
+        [
+          {
+            "node": "Generate top monthly views workflows table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit2": {
+      "main": [
+        [
+          {
+            "node": "Genetate top monthly views paid workflows table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort by monthlyViews1": {
+      "main": [
+        [
+          {
+            "node": "Limit2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate top monthly views workflows table": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate top monthly income workflows table": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Genetate top monthly views paid workflows table": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Summarize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort by monthlyIncome": {
+      "main": [
+        [
+          {
+            "node": "Limit3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit3": {
+      "main": [
+        [
+          {
+            "node": "Generate top monthly income workflows table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set parameters": {
+      "main": [
+        [
+          {
+            "node": "Get total workflows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1fdc5e15-71b7-4b45-9ab0-9184f2348e06",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2becb65d4b66d036a8d12c49fecf45d5287301cb0c9ecd89d61eb5ee89654957"
+  },
+  "id": "liaE8TuHNi6EHv5e",
+  "tags": []
+}
